@@ -1,0 +1,30 @@
+---
+title: "NDVI Trend Analysis Paulilatino"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: row
+    social: menu
+    source_code: embed
+  theme: flatly
+date: "2023-08-24"
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+```{r}
+library(shiny)
+library(flexdashboard)
+```
+
+```{r}
+inputPanel(
+  shiny::selectInput()
+)
+```
+

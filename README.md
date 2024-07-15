@@ -1,1 +1,1 @@
-# NDVI_trend_Paulilatino_07-24
+# TrendNdviPaulilatino
