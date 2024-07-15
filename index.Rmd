@@ -579,7 +579,7 @@ ndvi_avg0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_mean_plot.gpkg")
 
 # Create a new dataframe excluding the 2023 dates
 ndvi_avg <- ndvi_avg0 %>%
-  filter(!year(date) %in% c(2023, 2024)) # !!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!
 
 areas <- unique(ndvi_avg$AREA)
 write.csv(areas, file = "./OUTPUT/CSV/ndvi_avg.csv", row.names = FALSE, col.names = TRUE)
@@ -624,7 +624,7 @@ p1 <- ggplot(data_with_results, aes(x = date, y = mean_NDVI, color = AREA)) +
   labs(title = "Mean NDVI variation for each area",
        subtitle = "significative decraising (*)",
       x = "Date", y = "NDVI mean", color = "Area") +
-  theme_minimal()
+  theme_classic()
 
 # Elimina il file se già presente
 files_to_delete <-  "./GRAPHS/NDVI_means_area1.jpg"
@@ -651,7 +651,7 @@ p2 <- ggplot(data = data_with_results, aes(x = date, y = mean_NDVI, group = AREA
   labs(title = "Mean NDVI variation for each area",
        subtitle = "significative decraising (*)",
       x = "Date", y = "NDVI mean", color = "Area") +
-    theme_minimal()
+  theme_classic()
 
 # Elimina il file se già presente
 files_to_delete <-  "./GRAPHS/NDVI_means_area2.jpg"
@@ -729,9 +729,9 @@ crowns <- st_read("./ELABORATIONS/CROWNS_MERGED/crowns_merged.gpkg", crs = 32632
 
 NDVI_VALUES_0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_VALUES.gpkg", crs = 32632)
 
-# Create a new dataframe excluding the 2023 dates
+# Create a new dataframe excluding the 2024 dates
 NDVI_VALUES <- NDVI_VALUES_0 %>%
-  filter(!year(date) %in% c(2023, 2024)) # !!!!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!!!
 
 # Compute the mean NDVI for each data e COD
 ndvi_aggregated <- NDVI_VALUES %>%
@@ -748,7 +748,7 @@ cleaned_df <- na.omit(joined_df)
 # Filter data so that each COD has exactly 72 rows (MONTHS)
 filtered_df <- cleaned_df %>%
   group_by(COD) %>%
-  slice(1:60) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
+  slice(1:72) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
 
 # Elimina il file se già presente
 file <- "./OUTPUT/VECTOR/NDVI_DF/merged_data_ndvi.gpkg"
@@ -823,7 +823,7 @@ for (cod in cod_list) {
   intercept_ts <- theil_sen_fit$coefficients[1]
   
   # Create the time series
-  ts <- ts(data0$ndvi, start = c(2018, 1), end = c(2022, 12), frequency = 12)
+  ts <- ts(data0$ndvi, start = c(2018, 1), end = c(2023, 12), frequency = 12)
   
   # Perform the non-parametric Mann-Kendall (MK) test
   mk_test <- smk.test(ts)
