@@ -4,6 +4,8 @@ author: "Gabriele Giuseppe Antonio Satta"
 date: "`r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`"
 output:
   html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 This document aims to show the process using R studio for analyse and extract the NDVI values for each pixel inside the wild olive crowns polygons. The satellite images are form Multispectral PlanetScope images (RGB + NIR bands) whit a resolution of 3 m. The pixel extracted must be inside the crowns polygons at least for 2/3 of of its extension.
@@ -26,7 +28,7 @@ crowns0 <- st_read("./INPUT/VECTOR/crowns.gpkg")
 
 ```{r Prepare the crowns file_3, eval=FALSE}
 # Project the crowns feature
-crowns <- st_transform(crowns0, crs = "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs")
+crowns <- st_transform(crowns0, crs = "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs") 
 
 # Split the crowns object by area
 crowns_list <- split(crowns, crowns$AREA)
@@ -579,7 +581,7 @@ ndvi_avg0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_mean_plot.gpkg")
 
 # Create a new dataframe excluding the 2023 dates
 ndvi_avg <- ndvi_avg0 %>%
-  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!
 
 areas <- unique(ndvi_avg$AREA)
 write.csv(areas, file = "./OUTPUT/CSV/ndvi_avg.csv", row.names = FALSE, col.names = TRUE)
@@ -731,7 +733,7 @@ NDVI_VALUES_0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_VALUES.gpkg", crs = 32632
 
 # Create a new dataframe excluding the 2024 dates
 NDVI_VALUES <- NDVI_VALUES_0 %>%
-  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!!!
 
 # Compute the mean NDVI for each data e COD
 ndvi_aggregated <- NDVI_VALUES %>%
@@ -748,7 +750,7 @@ cleaned_df <- na.omit(joined_df)
 # Filter data so that each COD has exactly 72 rows (MONTHS)
 filtered_df <- cleaned_df %>%
   group_by(COD) %>%
-  slice(1:72) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
+  slice(1:60) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
 
 # Elimina il file se già presente
 file <- "./OUTPUT/VECTOR/NDVI_DF/merged_data_ndvi.gpkg"
@@ -796,6 +798,19 @@ NDVI_VALUES <- st_read("./OUTPUT/VECTOR/NDVI_DF/merged_data_ndvi.gpkg")
 ```
 
 ```{r Compute the Theil-Sen regression_3, eval=FALSE}
+# Install and load required libraries if not already installed
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("mblm")) install.packages("mblm")
+if (!require("trend")) install.packages("trend")
+if (!require("progress")) install.packages("progress")
+
+library(ggplot2)
+library(dplyr)
+library(mblm)
+library(trend)
+library(progress)
+
 # Set options to prevent the use of exponential notation
 options(scipen = 999)
 
@@ -814,11 +829,12 @@ for (cod in cod_list) {
   data0 <- NDVI_VALUES[NDVI_VALUES$COD == cod, ]
   
   # Convert dates to numbers (number of days from the minimum date)
-  data0$date_num <- as.numeric(data0$date - min(data0$date))
+  min_date <- min(data0$date)
+  data0$date_num <- as.numeric(data0$date - min_date)
   
   # Usa date_num invece di date
   theil_sen_fit <- mblm(ndvi ~ date_num, data = data0)
-
+  
   slope_ts <- theil_sen_fit$coefficients[2]
   intercept_ts <- theil_sen_fit$coefficients[1]
   
@@ -828,8 +844,21 @@ for (cod in cod_list) {
   # Perform the non-parametric Mann-Kendall (MK) test
   mk_test <- smk.test(ts)
   
+  # Generate the plot
+  data0$trend <- intercept_ts + slope_ts * data0$date_num
+  
+  p <- ggplot(data0, aes(x = date, y = ndvi)) +
+    geom_smooth(method = "loess", color = "green", se = FALSE, span = 0.18, ) +  
+    geom_smooth(method = "loess", color = "blue", se = FALSE) +
+    geom_line(aes(y = trend), color = "red") +
+    geom_point(color = "black", fill = "blue", alpha = 0.5) +
+    labs(title = paste("NDVI Trend for COD:", cod),
+         x = "Time",
+         y = "NDVI") +
+    theme_minimal()
+  
   # Save results in the list
-  results_list[[cod]] <- list(intercept_ts = intercept_ts, slope_ts = slope_ts, mk = mk_test)
+  results_list[[cod]] <- list(intercept_ts = intercept_ts, slope_ts = slope_ts, mk = mk_test, plot = p)
   
   # Update progress bar only if it has not reached the limit
   if (!pb$finished) {
@@ -997,7 +1026,7 @@ for (cod_value in cod_names_0) {
   data0 <- NDVI_VALUES[NDVI_VALUES$COD == cod_value, ]
   
   # Create a time series (ts)
-  ts_data <- ts(data0$ndvi, start = c(2018, 1), end = c(2022, 12), frequency = 12) ##### !!!!
+  ts_data <- ts(data0$ndvi, start = c(2019, 1), end = c(2023, 12), frequency = 12) ##### !!!!
   
   # Apply the dbest function
   dbest <- DBEST(data=ts_data, 
@@ -1105,7 +1134,7 @@ dates_df <- data.frame(date = dates)
 
 # Filtra le date rimuovendo quelle del 2023
 filtered_dates <- dates_df %>%
-  filter(!year(date) %in% c(2023, 2024)) # !!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!
 
 # Convert in date format the column date
 filtered_dates$date <- as.Date(filtered_dates$date) 
@@ -1480,6 +1509,21 @@ st_write(plot0, "./INPUT/VECTOR/plot_wgs84.gpkg", append = FALSE )
 rm(list=ls())
 ```
 
+### **Load the crowns shapefile**
+
+```{r Load the crowns shapefile_1, eval=FALSE}
+crowns0 <- st_read("./INPUT/VECTOR/crowns.gpkg")
+
+crowns <- st_transform(crowns0, crs = st_crs("+proj=longlat +datum=WGS84"))
+
+st_write(crowns, "./INPUT/VECTOR/crowns_wgs84.gpkg", append = FALSE )
+```
+
+```{r Load the crowns shapefile_2, eval=FALSE}
+# Clean the R environment
+rm(list=ls())
+```
+
 ------------------------------------------------------------------------
 
 ### **Create a interactive map**
@@ -1515,7 +1559,16 @@ focolai_wgs84 <- st_read("./INPUT/VECTOR/FOCOLAI_wgs84.gpkg")
 
 # Load the shp file of the plots in the Paulilatino area
 plots_wgs84 <- st_read("./INPUT/VECTOR/plot_wgs84.gpkg")
+
+# Load the shp file of the plots in the Paulilatino area
+crowns_wgs84 <- st_read("./INPUT/VECTOR/crowns_wgs84.gpkg")
 ```
+
+```{r load the list}
+results_list <- readRDS("./OUTPUT/LIST/results_list.rds")
+
+```
+
 
 ```{r Create a custom palette, message=FALSE, warning=FALSE}
 # Define a custom color palette for classes
@@ -1561,6 +1614,11 @@ map <- leaflet(options = leafletOptions(maxZoom = 22)) %>%
   addPolygons(data = plots_wgs84,
               fillOpacity = 0,
               color = "yellow",
+              weight = 2,
+              group = 'Plots') %>%
+  addPolygons(data = crowns_wgs84,
+              fillOpacity = 0,
+              color = "white",
               weight = 2,
               group = 'Plots') %>%
   addCircleMarkers(data = samples,
@@ -1616,3 +1674,24 @@ saveWidget(map, file = "./OUTPUT/MAP/map1.html", selfcontained = T)
 # Clean the R enviroment
 rm(list=ls())
 ```
+
+
+```{r}
+# Visualize the correlation between the slope and the p-value
+cor  <- cor(pixel_trend$slope, pixel_trend$mk_p_value)
+
+```
+
+
+```{r}
+# plot the correlation
+plot(pixel_trend$slope, pixel_trend$mk_p_value, main = "Correlation between slope and p-value", xlab = "Slope", ylab = "P-value")
+```
+
+
+```{r}
+# You have all the code and the process...what I can do after that? I would like to improve the elaboration of the data and the visualization of the results. Write a code of example to show me how to do it. Write it no row by row.
+```
+
+
+
