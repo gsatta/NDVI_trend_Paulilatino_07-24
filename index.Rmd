@@ -581,7 +581,7 @@ ndvi_avg0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_mean_plot.gpkg")
 
 # Create a new dataframe excluding the 2023 dates
 ndvi_avg <- ndvi_avg0 %>%
-  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!
 
 areas <- unique(ndvi_avg$AREA)
 write.csv(areas, file = "./OUTPUT/CSV/ndvi_avg.csv", row.names = FALSE, col.names = TRUE)
@@ -733,7 +733,7 @@ NDVI_VALUES_0 <- st_read("./OUTPUT/VECTOR/NDVI_DF/NDVI_VALUES.gpkg", crs = 32632
 
 # Create a new dataframe excluding the 2024 dates
 NDVI_VALUES <- NDVI_VALUES_0 %>%
-  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!!!
 
 # Compute the mean NDVI for each data e COD
 ndvi_aggregated <- NDVI_VALUES %>%
@@ -750,7 +750,7 @@ cleaned_df <- na.omit(joined_df)
 # Filter data so that each COD has exactly 72 rows (MONTHS)
 filtered_df <- cleaned_df %>%
   group_by(COD) %>%
-  slice(1:60) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
+  slice(1:72) # !!!!!!!!!!!!!!!!!! NUMERO DI MESI
 
 # Elimina il file se già presente
 file <- "./OUTPUT/VECTOR/NDVI_DF/merged_data_ndvi.gpkg"
@@ -1026,7 +1026,7 @@ for (cod_value in cod_names_0) {
   data0 <- NDVI_VALUES[NDVI_VALUES$COD == cod_value, ]
   
   # Create a time series (ts)
-  ts_data <- ts(data0$ndvi, start = c(2019, 1), end = c(2023, 12), frequency = 12) ##### !!!!
+  ts_data <- ts(data0$ndvi, start = c(2018, 1), end = c(2023, 12), frequency = 12) ##### !!!!
   
   # Apply the dbest function
   dbest <- DBEST(data=ts_data, 
@@ -1134,7 +1134,7 @@ dates_df <- data.frame(date = dates)
 
 # Filtra le date rimuovendo quelle del 2023
 filtered_dates <- dates_df %>%
-  filter(!year(date) %in% c(2018, 2024)) # !!!!!!!!!!!!!!
+  filter(!year(date) %in% c(2024)) # !!!!!!!!!!!!!!
 
 # Convert in date format the column date
 filtered_dates$date <- as.Date(filtered_dates$date) 
